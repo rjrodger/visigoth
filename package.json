@@ -17,6 +17,11 @@
   },
   "homepage": "https://github.com/rjrodger/visigoth",
   "dependencies": {
-    "lodash": "^4.2.1"
+    "assertion-error": "^1.0.1",
+    "chai": "^3.5.0",
+    "deep-eql": "^0.1.3",
+    "lodash": "^4.2.1",
+    "mocha": "^2.4.5",
+    "type-detect": "^1.0.0"
   }
 }

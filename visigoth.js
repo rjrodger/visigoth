@@ -1,15 +1,17 @@
 
-module.exports = {
-    // This function will rate how healthy an endpoint is 
-    upstreamRater : function(upstream) {
-        return 1;
-    },
-    algorithm : {},
-    upstreams : [],
-    add : api_add,
-    remove : api_remove,
-    choose : api_choose
-};
+module.exports = function(options) {
+    return {
+        // By default, round robin.
+        upstreamRater : function(upstream) {
+            return Date.now() - upstream.meta$.lastChoosenTimestamp;
+        },
+        algorithm : {},
+        upstreams : [],
+        add : api_add,
+        remove : api_remove,
+        choose : api_choose
+    };
+}
 
 var _ = require("lodash");
 
@@ -23,7 +25,8 @@ function api_add(target) {
     // Statistics about the upstream. Here is where the user pushes data.
     upstream.meta$.stats = {};
     upstream.meta$.status = "CLOSED";
-    upstream.target = target; 
+    upstream.meta$.lastChoosenTimestamp = null;
+    upstream.target = target;
     this.upstreams.push(upstream);
 }
 
@@ -48,13 +51,16 @@ function api_choose() {
     var bestScore = Number.MIN_SAFE_INTEGER;
     _(me.upstreams).forEach(function(upstream, index) {
         var current = me.upstreamRater(upstream);
-        if (current > bestScore) {
+        if (current > bestScore && upstream.meta$.status != "OPEN") {
             bestScore = current;
             bestNode = index;
         }
     });
-    // If the score is 0 or less... we cannot trust the node.
-    return bestScore <= 0 ? null : me.upstreams[bestNode];
+    // No healthy nodes available.
+    if (bestScore <= 0) {
+        return null;
+    } else {
+        me.upsteams[bestNode].meta$.lastChoosenTimestamp = Date.now();
+        return me.upstreams[bestNode];
+    }
 }
-
-var visigoth = module.exports;
