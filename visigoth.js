@@ -1,12 +1,16 @@
 
+
 module.exports = function(options) {
+    var customRater = undefined;
+    if (typeof options !== 'undefined') {
+        customRater = options.customRater;
+    }
+    
     return {
         // By default, round robin.
-        upstreamRater : function(upstream) {
-            return Date.now() - upstream.meta$.lastChoosenTimestamp;
-        },
-        algorithm : {},
-        upstreams : [],
+        upstreamRater$ : customRater || roundRobin,
+        upstreams$ : [],
+        lastChoosenIndex$ : null, 
         add : api_add,
         remove : api_remove,
         choose : api_choose
@@ -14,6 +18,13 @@ module.exports = function(options) {
 }
 
 var _ = require("lodash");
+
+/**
+ * Round Robin algorithm
+ */
+function roundRobin(upstream) {
+    return Date.now() - upstream.meta$.lastChoosenTimestamp;
+}
 
 /**
  * Adds one upstream to the list.
@@ -27,7 +38,7 @@ function api_add(target) {
     upstream.meta$.status = "CLOSED";
     upstream.meta$.lastChoosenTimestamp = null;
     upstream.target = target;
-    this.upstreams.push(upstream);
+    this.upstreams$.push(upstream);
 }
 
 /**
@@ -35,7 +46,7 @@ function api_add(target) {
  */
 function api_remove(upstream) {
     var me = this;
-    me.upstreams = _.reject(me.upstreams, function(e) {
+    me.upstreams$ = _.reject(me.upstreams$, function(e) {
         return _.isEqual(e, upstream.target);
     });
 }
@@ -45,22 +56,30 @@ function api_remove(upstream) {
  * that the user will pass as a parameter to visigoth. This function will iterate
  * over the upstreams and return the one with a higher score. 
  */
-function api_choose() {
+function api_choose(callback) {
     var me = this;
     var bestNode = 0;
     var bestScore = Number.MIN_SAFE_INTEGER;
-    _(me.upstreams).forEach(function(upstream, index) {
-        var current = me.upstreamRater(upstream);
+    _(me.upstreams$).forEach(function(upstream, index) {
+        var current = me.upstreamRater$(upstream, index, me.upstreams$);
         if (current > bestScore && upstream.meta$.status != "OPEN") {
             bestScore = current;
             bestNode = index;
         }
     });
     // No healthy nodes available.
-    if (bestScore <= 0) {
+    if (bestScore < 0) {
         return null;
     } else {
-        me.upsteams[bestNode].meta$.lastChoosenTimestamp = Date.now();
-        return me.upstreams[bestNode];
+        // When was the node choosen the last time:
+        me.upstreams$[bestNode].meta$.lastChoosenTimestamp = Date.now();
+        // Which node was the last choosen:
+        me.lastChoosenIndex$ = bestNode;
+        // Now we inform about the choosen node, with the stats of the node:
+        try {
+            callback(me.upstreams$[bestNode].target, me.upstreams$[bestNode].meta$.stats);
+        } catch(err) {
+            me.upstreams$[bestNode].meta$.status = "OPEN";
+        }
     }
 }
