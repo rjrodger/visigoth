@@ -54,13 +54,14 @@ function api_remove(upstream) {
 /**
  * This function chooses one upstream based on a score given by a function
  * that the user will pass as a parameter to visigoth. This function will iterate
- * over the upstreams and return the one with a higher score. 
+ * over the upstreams and return the one with a higher score.
  */
 function api_choose(callback) {
     var me = this;
     var bestNode = 0;
     var bestScore = Number.MIN_SAFE_INTEGER;
     _(me.upstreams$).forEach(function(upstream, index) {
+        // TODO David: Think about what we pass in here.
         var current = me.upstreamRater$(upstream, index, me.upstreams$);
         if (current > bestScore && upstream.meta$.status != "OPEN") {
             bestScore = current;
@@ -79,6 +80,7 @@ function api_choose(callback) {
         try {
             callback(me.upstreams$[bestNode].target, me.upstreams$[bestNode].meta$.stats);
         } catch(err) {
+            // TODO David: Logic for re-closing the circuit (also HALF-OPEN) is missing. Work in progress.
             me.upstreams$[bestNode].meta$.status = "OPEN";
         }
     }
