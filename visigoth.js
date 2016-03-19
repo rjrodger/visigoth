@@ -51,7 +51,7 @@ function api_add(target) {
 function api_remove(upstream) {
     var me = this;
     me.upstreams$ = _.reject(me.upstreams$, function(e) {
-        return _.isEqual(e, upstream.target);
+        return _.isEqual(e.target, upstream);
     });
 }
 
