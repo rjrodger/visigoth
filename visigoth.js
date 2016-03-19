@@ -1,15 +1,18 @@
 
-
 module.exports = function(options) {
     var customRater = undefined;
+    var closingTimeout = undefined;
     if (typeof options !== 'undefined') {
         customRater = options.customRater;
+        closingTimeout = options.closingTimeout;
     }
     
     return {
         // By default, round robin.
         upstreamRater$ : customRater || roundRobin,
         upstreams$ : [],
+        // 30 seconds by default
+        closingTimeout$: closingTimeout || 30000,
         lastChoosenIndex$ : null, 
         add : api_add,
         remove : api_remove,
@@ -36,6 +39,7 @@ function api_add(target) {
     // Statistics about the upstream. Here is where the user pushes data.
     upstream.meta$.stats = {};
     upstream.meta$.status = "CLOSED";
+    upstream.meta$.statusTimestamp = Date.now();
     upstream.meta$.lastChoosenTimestamp = null;
     upstream.target = target;
     this.upstreams$.push(upstream);
@@ -60,7 +64,14 @@ function api_choose(callback) {
     var me = this;
     var bestNode = 0;
     var bestScore = Number.MIN_SAFE_INTEGER;
+    
     _(me.upstreams$).forEach(function(upstream, index) {
+        // Re-closing if the timeout has expired;
+        if (upstream.meta$.status == 'OPEN') {
+            if ((Date.now() - upstream.meta$.statusTimestamp) > me.closingTimeout$) {
+                upstream.meta$.status = 'HALF-OPEN';
+            }
+        }
         // TODO David: Think about what we pass in here.
         var current = me.upstreamRater$(upstream, index, me.upstreams$);
         if (current > bestScore && upstream.meta$.status != "OPEN") {
@@ -68,20 +79,20 @@ function api_choose(callback) {
             bestNode = index;
         }
     });
-    // No healthy nodes available.
+
     if (bestScore < 0) {
-        return null;
+        throw "no healthy nodes available";
     } else {
-        // When was the node choosen the last time:
         me.upstreams$[bestNode].meta$.lastChoosenTimestamp = Date.now();
-        // Which node was the last choosen:
         me.lastChoosenIndex$ = bestNode;
-        // Now we inform about the choosen node, with the stats of the node:
         try {
             callback(me.upstreams$[bestNode].target, me.upstreams$[bestNode].meta$.stats);
         } catch(err) {
-            // TODO David: Logic for re-closing the circuit (also HALF-OPEN) is missing. Work in progress.
             me.upstreams$[bestNode].meta$.status = "OPEN";
+            me.upstreams$[bestNode].meta$.statusTimestamp = Date.now();
+        }
+        if (me.upstreams$[bestNode].meta$.status == "HALF-OPEN") {
+            me.upstreams$[bestNode].meta$.status = "CLOSED";
         }
     }
 }
