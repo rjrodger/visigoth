@@ -6,14 +6,14 @@ module.exports = function(options) {
         customRater = options.customRater;
         closingTimeout = options.closingTimeout;
     }
-    
+
     return {
         // By default, round robin.
         upstreamRater$ : customRater || roundRobin,
         upstreams$ : [],
         // 30 seconds by default
         closingTimeout$: closingTimeout || 30000,
-        lastChoosenIndex$ : null, 
+        lastChoosenIndex$ : null,
         add : api_add,
         remove : api_remove,
         choose : api_choose
@@ -64,7 +64,7 @@ function api_choose(callback) {
     var me = this;
     var bestNode = 0;
     var bestScore = Number.MIN_SAFE_INTEGER;
-    
+
     _(me.upstreams$).forEach(function(upstream, index) {
         // Re-closing if the timeout has expired;
         if (upstream.meta$.status == 'OPEN') {
@@ -72,7 +72,6 @@ function api_choose(callback) {
                 upstream.meta$.status = 'HALF-OPEN';
             }
         }
-        // TODO David: Think about what we pass in here.
         var current = me.upstreamRater$(upstream, index, me.upstreams$);
         if (current > bestScore && upstream.meta$.status != "OPEN") {
             bestScore = current;
@@ -91,6 +90,7 @@ function api_choose(callback) {
             me.upstreams$[bestNode].meta$.status = "OPEN";
             me.upstreams$[bestNode].meta$.statusTimestamp = Date.now();
         }
+        // Close the circuit once it has been successful
         if (me.upstreams$[bestNode].meta$.status == "HALF-OPEN") {
             me.upstreams$[bestNode].meta$.status = "CLOSED";
         }
