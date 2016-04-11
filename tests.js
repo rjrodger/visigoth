@@ -3,22 +3,22 @@ var sinon = require("sinon");
 
 describe('add targets', function() {
     it("should add a target with status 'CLOSED' and set the 'statusTimestamp'", function() {
-        
+
         var visigoth = require('./visigoth')();
         var clock = sinon.useFakeTimers();
-        
+
         // Tick some msecs just to avoid 0 which could be a default value.
         clock.tick(110);
-        
+
         visigoth.add("I am a node");
-        
+
         expect(visigoth.upstreams$[0].target).to.equal("I am a node");
         expect(visigoth.upstreams$.length).to.equal(1);
         expect(visigoth.upstreams$[0].meta$.status).to.equal("CLOSED");
         expect(visigoth.upstreams$[0].meta$.statusTimestamp).to.equal(clock.now);
         clock.restore();
     });
-    
+
     it("lastChoosenTimestamp should be null if the node was never choosen (just added)", function(){
         var visigoth = require('./visigoth')();
         visigoth.add("I am a node");
@@ -35,7 +35,7 @@ describe('remove targets', function() {
         expect(visigoth.upstreams$.length).to.equal(1);
         expect(visigoth.upstreams$[0].target).to.equal("target 2");
     });
-    
+
     it('removes a function target', function () {
         var visigoth = require('./visigoth')();
         var a = new function() {return "a";};
@@ -45,7 +45,7 @@ describe('remove targets', function() {
         visigoth.remove(a);
         expect(visigoth.upstreams$[0].target).to.equal(b);
     });
-    
+
     it('removes an object target', function () {
         var visigoth = require('./visigoth')();
         var a = {a: "a"};
@@ -58,5 +58,50 @@ describe('remove targets', function() {
 });
 
 describe('choose target', function () {
-    
+    it('chooses a target when there is at least one available', function(done) {
+        var visigoth = require('./visigoth')();
+        visigoth.add("node one");
+        visigoth.choose(function(target) {
+          expect(target).to.equal("node one");
+          done();
+        });
+    });
+
+    it('fails when there are no targets', function() {
+        var visigoth = require('./visigoth')();
+        expect(visigoth.choose).to.throw("no healthy nodes available");
+    });
+
+    it('opens the circuit when there is an exception raised', function() {
+        var visigoth = require('./visigoth')();
+        visigoth.add("test target");
+        visigoth.choose(function(target) {
+          throw "exception!";
+        });
+        expect(visigoth.upstreams$[0].meta$.status).to.equal('OPEN');
+    });
+
+    it('marks the node as "HALF-OPEN" once the timeout has expired', function(done) {
+        var clock = sinon.useFakeTimers();
+
+        var visigoth = require('./visigoth')({closingTimeout: 300});
+
+        visigoth.add("test target");
+        visigoth.add("test target 2");
+        visigoth.choose(function(target) {
+            throw "exception!";
+        });
+
+        clock.tick(300);
+        visigoth.choose(function(target) {
+            expect(target).to.equal('test target 2');
+            expect(visigoth.upstreams$[0].meta$.status).to.equal('OPEN');
+            clock.tick(1);
+            visigoth.choose(function(target) {
+                expect(target).to.equal('test target');
+                expect(visigoth.upstreams$[0].meta$.status).to.equal('HALF-OPEN');
+                done();
+            });
+        });
+    });
 });
