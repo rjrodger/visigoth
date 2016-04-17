@@ -16,7 +16,9 @@ module.exports = function(options) {
         lastChoosenIndex$ : null,
         add : api_add,
         remove : api_remove,
-        choose : api_choose
+        remove_by: api_remove_by,
+        choose : api_choose,
+        choose_all: api_choose_all
     };
 }
 
@@ -52,6 +54,28 @@ function api_remove(upstream) {
     var me = this;
     me.upstreams$ = _.reject(me.upstreams$, function(e) {
         return _.isEqual(e.target, upstream);
+    });
+}
+
+/**
+ * Removes the endpoints by letting the user pass a function that
+ * returns true if the node has to be removed.
+ */
+function api_remove_by(callback) {
+    var me = this;
+    me.upstreams$ = _.reject(me.upstreams$, function(e) {
+        return callback(e.target);
+    });
+}
+
+/**
+ * Choose all the available not opened targets.
+ */
+function api_choose_all(callback) {
+    _(me.upstreams$).forEach(function(upstream, index) {
+        if (upstream.meta$.status != "CLOSED") {
+            callback(upstream, index);
+        }
     });
 }
 
