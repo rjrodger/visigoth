@@ -112,8 +112,16 @@ function api_choose(callback) {
     } else {
         me.upstreams$[bestNode].meta$.lastChoosenTimestamp = Date.now();
         me.lastChoosenIndex$ = bestNode;
+        
+        // With this callback we avoid exposing too much info:
+        var errorCallback = function(node) {
+            return function() {
+                node.meta$.status = 'OPEN';
+                me.upstreams$[bestNode].meta$.statusTimestamp = Date.now();
+            }
+        }
         try {
-            callback(me.upstreams$[bestNode].target, me.upstreams$[bestNode].meta$.stats);
+            callback(me.upstreams$[bestNode].target, errorCallback(me.upstreams$[bestNode]), me.upstreams$[bestNode].meta$.stats);
         } catch(err) {
             me.upstreams$[bestNode].meta$.status = "OPEN";
             me.upstreams$[bestNode].meta$.statusTimestamp = Date.now();
@@ -121,6 +129,7 @@ function api_choose(callback) {
         // Close the circuit once it has been successful
         if (me.upstreams$[bestNode].meta$.status == "HALF-OPEN") {
             me.upstreams$[bestNode].meta$.status = "CLOSED";
+            me.upstreams$[bestNode].meta$.statusTimestamp = Date.now();
         }
     }
 }

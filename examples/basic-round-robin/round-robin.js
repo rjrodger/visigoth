@@ -5,7 +5,7 @@ visigoth.add('upstream1');
 visigoth.add('upstream2');
 
 for (var i = 0; i < 100; i++) {
-  visigoth.choose(function(upstream, stats) {
+  visigoth.choose(function(upstream, errored, stats) {
       console.log(upstream);
   });
 }
