@@ -13,7 +13,7 @@ module.exports = function(options) {
         upstreams$ : [],
         // 30 seconds by default
         closingTimeout$: closingTimeout || 30000,
-        lastChoosenIndex$ : null,
+        lastChoosenIndex$ : -1,
         add : api_add,
         remove : api_remove,
         remove_by: api_remove_by,
@@ -27,8 +27,12 @@ var _ = require("lodash");
 /**
  * Round Robin algorithm
  */
-function roundRobin(upstream) {
-    return Date.now() - upstream.meta$.lastChoosenTimestamp;
+function roundRobin(upstream, index, upstreams) {
+    if ((this.lastChoosenIndex$ + 1) % upstreams.length == index) {
+        return 10;
+    } else {
+        return 0;
+    }
 }
 
 /**

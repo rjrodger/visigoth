@@ -4,14 +4,8 @@ var visigoth = require('../visigoth')();
 visigoth.add('upstream1');
 visigoth.add('upstream2');
 
-visigoth.choose(function(upstream, stats) {
-    console.log(upstream);
-});
-
-visigoth.choose(function(upstream, stats) {
-    console.log(upstream);
-});
-
-visigoth.choose(function(upstream, stats) {
-    console.log(upstream);
-});
+for (var i = 0; i < 100; i++) {
+  visigoth.choose(function(upstream, stats) {
+      console.log(upstream);
+  });
+}
