@@ -2,7 +2,7 @@
 Visgoth is a multipurpose circuit breaker. By default, it provides a round-robin
 strategy that will work in the majority of the situations.
 
-Visigoth allows you to customize the strategy for choosing the healthier target
+Visigoth allows you to customize the strategy for choosing the healthiest target
 by evaluating the statistics recorded by previous calls to the same target:
 
 ```
