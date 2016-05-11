@@ -2,14 +2,17 @@
 module.exports = function(options) {
     var customRater = undefined;
     var closingTimeout = undefined;
+    var failureStrategy = undefined;
     if (typeof options !== 'undefined') {
         customRater = options.customRater;
         closingTimeout = options.closingTimeout;
+        failureStrategy = options.failureStrategy;
     }
 
     return {
         // By default, round robin.
         upstreamRater$ : customRater || roundRobin,
+        failureStrategy$ : failureStrategy || defaultFailureHandler,
         upstreams$ : [],
         // 30 seconds by default
         closingTimeout$: closingTimeout || 30000,
@@ -32,6 +35,14 @@ function roundRobin(upstream, index, upstreams) {
         return 10;
     } else {
         return 0;
+    }
+}
+
+function defaultFailureHandler(node) {
+    // This function gets called when the user wants to flag an error.
+    return function() {
+        node.meta$.status = 'OPEN';
+        node.meta$.statusTimestamp = Date.now();
     }
 }
 
@@ -106,30 +117,18 @@ function api_choose(callback) {
             bestNode = index;
         }
     });
-
-    if (bestScore < 0) {
-        throw "no healthy nodes available";
-    } else {
+    if (bestScore > 0) {
         me.upstreams$[bestNode].meta$.lastChoosenTimestamp = Date.now();
         me.lastChoosenIndex$ = bestNode;
         
-        // With this callback we avoid exposing too much info:
-        var errorCallback = function(node) {
-            return function() {
-                node.meta$.status = 'OPEN';
-                me.upstreams$[bestNode].meta$.statusTimestamp = Date.now();
-            }
-        }
-        try {
-            callback(me.upstreams$[bestNode].target, errorCallback(me.upstreams$[bestNode]), me.upstreams$[bestNode].meta$.stats);
-        } catch(err) {
-            me.upstreams$[bestNode].meta$.status = "OPEN";
-            me.upstreams$[bestNode].meta$.statusTimestamp = Date.now();
-        }
+        callback(me.upstreams$[bestNode].target, this.failureStrategy$(me.upstreams$[bestNode]), me.upstreams$[bestNode].meta$.stats);
         // Close the circuit once it has been successful
         if (me.upstreams$[bestNode].meta$.status == "HALF-OPEN") {
             me.upstreams$[bestNode].meta$.status = "CLOSED";
             me.upstreams$[bestNode].meta$.statusTimestamp = Date.now();
         }
+    } else {
+        // undefined params.
+        callback();
     }
 }

@@ -67,18 +67,14 @@ describe('choose target', function () {
         });
     });
 
-    it('fails when there are no targets', function() {
+    it('fails when there are no targets', function(done) {
         var visigoth = require('./visigoth')();
-        expect(visigoth.choose).to.throw("no healthy nodes available");
-    });
-
-    it('opens the circuit when there is an exception raised', function() {
-        var visigoth = require('./visigoth')();
-        visigoth.add("test target");
-        visigoth.choose(function(target) {
-          throw "exception!";
+        visigoth.choose(function(target, errored, stats) {
+            expect(target).to.be.undefined
+            expect(errored).to.be.undefined
+            expect(stats).to.be.undefined
+            done();
         });
-        expect(visigoth.upstreams$[0].meta$.status).to.equal('OPEN');
     });
 
     it('marks the node as "HALF-OPEN" once the timeout has expired', function(done) {
@@ -88,8 +84,8 @@ describe('choose target', function () {
 
         visigoth.add("test target");
         visigoth.add("test target 2");
-        visigoth.choose(function(target) {
-            throw "exception!";
+        visigoth.choose(function(target, errored) {
+            errored();
         });
 
         clock.tick(300);
