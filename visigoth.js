@@ -34,7 +34,7 @@ function roundRobin(upstream, index, upstreams) {
     if ((this.lastChoosenIndex$ + 1) % upstreams.length == index) {
         return 10;
     } else {
-        return 0;
+        return 1;
     }
 }
 
@@ -117,11 +117,12 @@ function api_choose(callback) {
             bestNode = index;
         }
     });
+    
     if (bestScore > 0) {
         me.upstreams$[bestNode].meta$.lastChoosenTimestamp = Date.now();
         me.lastChoosenIndex$ = bestNode;
         
-        callback(me.upstreams$[bestNode].target, this.failureStrategy$(me.upstreams$[bestNode]), me.upstreams$[bestNode].meta$.stats);
+        callback(null, me.upstreams$[bestNode].target, this.failureStrategy$(me.upstreams$[bestNode]), me.upstreams$[bestNode].meta$.stats);
         // Close the circuit once it has been successful
         if (me.upstreams$[bestNode].meta$.status == "HALF-OPEN") {
             me.upstreams$[bestNode].meta$.status = "CLOSED";
@@ -129,6 +130,6 @@ function api_choose(callback) {
         }
     } else {
         // undefined params.
-        callback();
+        callback("no upstreams available");
     }
 }

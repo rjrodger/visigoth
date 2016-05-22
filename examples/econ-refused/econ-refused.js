@@ -13,7 +13,7 @@ console.log(visigoth.upstreams$);
 // Choose a node 3 times, 1 will fail and the two others will be the successful node:
 async.series([
     function(callback) {
-        visigoth.choose(function(target, errored, stats) {
+        visigoth.choose(function(err, target, errored, stats) {
             request(target, function(error, response, body) {
                 console.log("connecting to " + target);
                 if (error) {
@@ -27,7 +27,7 @@ async.series([
         });
     },
     function(callback) {
-        visigoth.choose(function(target, errored, stats) {
+        visigoth.choose(function(err, target, errored, stats) {
             request(target, function(error, response, body) {
                 console.log("connecting to " + target);
                 if (error) {
@@ -41,7 +41,8 @@ async.series([
         });
     },
     function(callback) {
-        visigoth.choose(function(target, errored, stats) {
+        visigoth.choose(function(err, target, errored, stats) {
+            console.log(err);
             request(target, function(error, response, body) {
                 console.log("connecting to " + target);
                 if (error) {

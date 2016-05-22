@@ -23,7 +23,7 @@ var async = require('async');
 async.series([
     // Slow-upstream:
     function(callback) {
-        visigoth.choose(function(target, errored, stats) {
+        visigoth.choose(function(err, target, errored, stats) {
             console.log(target);
             if (target === "slow-upstream") {
                 stats.responseTime = 3001;
@@ -35,7 +35,7 @@ async.series([
     },
     // Fast-upstream:
     function(callback) {
-        visigoth.choose(function(target, errored, stats) {
+        visigoth.choose(function(err, target, errored, stats) {
             console.log(target);
             if (target === "slow-upstream") {
                 stats.responseTime = 3001;
@@ -47,7 +47,7 @@ async.series([
     },
     // Fast-upstream (slow upstream has a very low score now):
     function(callback) {
-        visigoth.choose(function(target, errored, stats) {
+        visigoth.choose(function(err, target, errored, stats) {
             console.log(target);
             if (target === "slow-upstream") {
                 stats.responseTime = 3001;

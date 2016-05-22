@@ -61,7 +61,8 @@ describe('choose target', function () {
     it('chooses a target when there is at least one available', function(done) {
         var visigoth = require('./visigoth')();
         visigoth.add("node one");
-        visigoth.choose(function(target) {
+        visigoth.choose(function(error, target) {
+          expect(error).to.be.null;
           expect(target).to.equal("node one");
           done();
         });
@@ -69,10 +70,11 @@ describe('choose target', function () {
 
     it('fails when there are no targets', function(done) {
         var visigoth = require('./visigoth')();
-        visigoth.choose(function(target, errored, stats) {
-            expect(target).to.be.undefined
-            expect(errored).to.be.undefined
-            expect(stats).to.be.undefined
+        visigoth.choose(function(error, target, errored, stats) {
+            expect(error).to.not.be.null;
+            expect(target).to.be.undefined;
+            expect(errored).to.be.undefined;
+            expect(stats).to.be.undefined;
             done();
         });
     });
@@ -84,16 +86,16 @@ describe('choose target', function () {
 
         visigoth.add("test target");
         visigoth.add("test target 2");
-        visigoth.choose(function(target, errored) {
+        visigoth.choose(function(err, target, errored) {
             errored();
         });
 
         clock.tick(300);
-        visigoth.choose(function(target) {
+        visigoth.choose(function(err, target) {
             expect(target).to.equal('test target 2');
             expect(visigoth.upstreams$[0].meta$.status).to.equal('OPEN');
             clock.tick(1);
-            visigoth.choose(function(target) {
+            visigoth.choose(function(err, target) {
                 expect(target).to.equal('test target');
                 expect(visigoth.upstreams$[0].meta$.status).to.equal('HALF-OPEN');
                 done();
