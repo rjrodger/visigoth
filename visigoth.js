@@ -109,9 +109,14 @@ function api_choose(callback) {
         if (upstream.meta$.status == 'OPEN') {
             if ((Date.now() - upstream.meta$.statusTimestamp) > me.closingTimeout$) {
                 upstream.meta$.status = 'HALF-OPEN';
+                upstream.meta$.statusTimestamp = Date.now();
             }
         }
         var current = me.upstreamRater$(upstream, index, me.upstreams$);
+        if (current <= 0) {
+            upstream.meta$.status = 'OPEN';
+            upstream.meta$.statusTimestamp = Date.now();
+        }
         if (current > bestScore && upstream.meta$.status != "OPEN") {
             bestScore = current;
             bestNode = index;
@@ -129,7 +134,6 @@ function api_choose(callback) {
             me.upstreams$[bestNode].meta$.statusTimestamp = Date.now();
         }
     } else {
-        // undefined params.
         callback("no upstreams available");
     }
 }
