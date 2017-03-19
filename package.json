@@ -4,7 +4,8 @@
   "description": "",
   "main": "visigoth.js",
   "scripts": {
-    "test": "mocha tests.js"
+    "test": "mocha tests.js",
+    "coverage": "istanbul cover node_modules/.bin/_mocha tests.js"
   },
   "repository": {
     "type": "git",
